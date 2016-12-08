@@ -1,0 +1,239 @@
+#!/usr/bin/python3
+
+import argparse
+import csv
+import datetime
+import io
+import logging
+import math
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
+import os
+import requests
+
+from collections import OrderedDict
+
+from slackclient import SlackClient
+
+VELOCITY = 13
+SHOOTOUT = 0.7
+
+logger = logging.getLogger(__name__)
+
+SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
+slack_client = SlackClient(SLACK_CLIENT_ID)
+IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
+
+
+class Team():
+    def __init__(self, name, color):
+        self.name = name
+        self.elo = 1500
+        self.history = []
+        self.color = color
+
+    def __str__(self):
+        return self.name
+
+    def win(self, change):
+        self.history.append(self.elo)
+        self.elo += change
+
+    def lose(self, change):
+        self.history.append(self.elo)
+        self.elo -= change
+
+    def full_history(self):
+        return self.history + [self.elo]
+
+    def num_games(self):
+        return len(self.full_history())
+
+    def last_game_up_or_down(self):
+        if self.latest_change() < 0:
+            return "goes down to"
+        else:
+            return "goes up to"
+
+    def latest_change(self):
+        return self.elo - self.history[-1]
+
+    def last_game_explanation(self):
+        return "{} rating {} {:.1f} ({:.1f})".format(
+            self.name,
+            self.last_game_up_or_down(),
+            self.elo,
+            self.latest_change())
+
+
+NORTH_STARS = Team("North Stars", "green")
+GOLDEN_SEALS = Team("Golden Seals", "cyan")
+WHALERS = Team("Whalers", "blue")
+NORDIQUES = Team("Nordiques", "red")
+
+teams = {team.name: team for team in [NORTH_STARS, GOLDEN_SEALS, WHALERS, NORDIQUES]}
+
+def get_score(score):
+    """
+    Get the score in the from the csv string
+    """
+    return int(score.split()[0])
+
+def get_shootout(row):
+    """
+    Whether or not the game was decided in a shootout
+    """
+    return (('SO' in row['Home Score']) or ('SO' in row['Away Score']))
+
+
+def get_outcome(home_team_score, away_team_score, shootout):
+    """
+    Gets the actual value of the game
+    """
+    if not shootout and home_team_score > away_team_score:
+        return 1
+    elif shootout and home_team_score > away_team_score:
+        return SHOOTOUT
+    elif shootout and away_team_score > home_team_score:
+        return 1 - SHOOTOUT
+    else:
+        return 0
+
+
+def get_expected(home_team, away_team):
+    """
+    get the expected value of a game
+    """
+    return (1.0 / (1.0 + 10.0 ** (-(home_team.elo - away_team.elo)/400)))
+
+
+def get_margin(home_team, away_team, home_team_score, away_team_score):
+    """
+    Get the multiplier for the margin of victory
+    """
+    gd = home_team_score - away_team_score
+    return max(1, math.log(abs( gd -.85 * ((home_team.elo - away_team.elo)/100)) + math.e -1))
+
+
+def set_elos(winner, loser, change, winner_score, loser_score, shootout):
+    logger.info(("{winner_name} {winner_score} {loser_name} {loser_score}{shootout}. "
+                 "{winner_name} elo {winner_elo:.1f} + {change:.1f} "
+                 "{loser_name} elo {loser_elo:.1f} - {change:.1f}").format(
+                     winner_name=winner.name,
+                     winner_elo=winner.elo,
+                     loser_name=loser.name,
+                     loser_elo=loser.elo,
+                     winner_score=winner_score,
+                     loser_score=loser_score,
+                     change=change,
+                     shootout=" (SO)" if shootout else ""))
+    winner.win(change)
+    loser.lose(change)
+
+
+def process_game(row):
+    home_team = teams[row['Home Team']]
+    away_team = teams[row['Away Team']]
+    home_team_score = get_score(row['Home Score'])
+    away_team_score = get_score(row['Away Score'])
+    shootout = get_shootout(row)
+    margin = get_margin(home_team, away_team, home_team_score, away_team_score)
+    outcome = get_outcome(home_team_score, away_team_score, shootout)
+    expected = get_expected(home_team, away_team)
+    change = VELOCITY * margin * (outcome - expected)
+
+    if home_team_score > away_team_score:
+        set_elos(home_team, away_team, change, home_team_score, away_team_score, shootout)
+    elif away_team_score > home_team_score:
+        set_elos(away_team, home_team, -change, away_team_score, home_team_score, shootout)
+
+
+def print_elos(on):
+    print(get_print_message(on))
+
+
+def plot_elos():
+    """
+    Returns an in memory PNG of the picture of our teams ratings
+    """
+    assert plt != None, "Matplotlib was not able to be imported"
+    legend = []
+    sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
+    colors = [team.color for team in sorted_teams.values()]
+
+    plt.gca().set_color_cycle(colors)
+    plt.title("MNL Elo, Velocity:{} SO:{}".format(VELOCITY, SHOOTOUT))
+    for team in sorted_teams.values():
+        plt.plot(range(team.num_games()), team.full_history())
+        legend.append("{}: {}".format(team.name, int(team.elo)))
+    plt.legend(legend, loc='upper left')
+    buf = io.BytesIO()
+    plt.savefig(buf)
+    buf.seek(0)
+    return buf
+
+
+def get_print_message(on, last_game=True):
+    message = "MNL Elo ratings for {:%m/%d/%Y}\n".format(on)
+    if last_game:
+        sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
+        for team in sorted_teams.values():
+            message += team.last_game_explanation()+"\n"
+    return message
+
+
+def post_elos_to_slack(link, on, channel="tests", last_game=True):
+    slack_client.api_call(
+        'chat.postMessage',
+        channel=channel,
+        text=get_print_message(on, last_game),
+        attachments=[{"image_url":link,
+                      "title":"Current Elo ratings"
+        }],
+        as_user=True)
+
+def upload_picture_to_imgur(image):
+    response = requests.post(
+        "https://api.imgur.com/3/image",
+        files={"image":image},
+        headers={
+            "Authorization": "Client-ID {}".format(IMGUR_CLIENT_ID)
+        }
+    )
+    return response.json()['data']['link']
+
+def get_raw_results_reader():
+    response = requests.get(
+        ("https://docs.google.com/spreadsheets"
+         "/u/1/d/1JcjwMdsjzPI-WesV6l4O0eThWGVU"
+         "AvN7-Z7lTrUG_iY/export?format=csv&"
+         "id=1JcjwMdsjzPI-WesV6l4O0eThWGVUAvN7-Z7lTrUG_iY&gid=0"))
+    buf = io.StringIO()
+    buf.write(response.content.decode())
+    buf.seek(0)
+    return csv.DictReader(buf)
+
+
+parser = argparse.ArgumentParser(
+    description=("Download latest MNL results and calculate ratings and post to slack"))
+parser.add_argument('--post', action='store_true')
+parser.add_argument('--channel', default="tests")
+parser.add_argument('--last_game', action="store_true")
+args = parser.parse_args()
+
+if __name__ == '__main__':
+    for row in get_raw_results_reader():
+        try:
+            process_game(row)
+        except IndexError:
+            break
+
+    last = datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
+    if args.post:
+        image = plot_elos()
+        link = upload_picture_to_imgur(image)
+        post_elos_to_slack(link, last, args.channel, args.last_game)
+    else:
+        print_elos(last)
