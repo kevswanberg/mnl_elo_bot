@@ -175,20 +175,19 @@ def plot_elos():
     return buf
 
 
-def get_print_message(on, last_game=True):
+def get_print_message(on):
     message = "MNL Elo ratings for {:%m/%d/%Y}\n".format(on)
-    if last_game:
-        sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
-        for team in sorted_teams.values():
-            message += team.last_game_explanation()+"\n"
+    sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
+    for team in sorted_teams.values():
+        message += team.last_game_explanation()+"\n"
     return message
 
 
-def post_elos_to_slack(link, on, channel="tests", last_game=True):
+def post_elos_to_slack(link, on, channel="tests"):
     slack_client.api_call(
         'chat.postMessage',
         channel=channel,
-        text=get_print_message(on, last_game),
+        text=get_print_message(on),
         attachments=[{"image_url":link,
                       "title":"Current Elo ratings"
         }],
@@ -220,7 +219,6 @@ parser = argparse.ArgumentParser(
     description=("Download latest MNL results and calculate ratings and post to slack"))
 parser.add_argument('--post', action='store_true')
 parser.add_argument('--channel', default="tests")
-parser.add_argument('--last_game', action="store_true")
 args = parser.parse_args()
 
 if __name__ == '__main__':
@@ -234,6 +232,6 @@ if __name__ == '__main__':
     if args.post:
         image = plot_elos()
         link = upload_picture_to_imgur(image)
-        post_elos_to_slack(link, last, args.channel, args.last_game)
+        post_elos_to_slack(link, last, args.channel)
     else:
         print_elos(last)
