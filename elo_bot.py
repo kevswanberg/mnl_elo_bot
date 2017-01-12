@@ -18,7 +18,8 @@ from collections import OrderedDict
 from slackclient import SlackClient
 
 VELOCITY = 13
-SHOOTOUT = 0.7
+SHOOTOUT = 0.6
+OVERTIME = 0.8
 
 logger = logging.getLogger(__name__)
 
@@ -87,13 +88,24 @@ def get_shootout(row):
     """
     return (('SO' in row['Home Score']) or ('SO' in row['Away Score']))
 
+def get_overtime(row):
+    """
+    Whether or not the game was decided in overtime
+    """
+    return (('OT' in row['Home Score']) or ('OT' in row['Away Score']))
 
-def get_outcome(home_team_score, away_team_score, shootout):
+
+
+def get_outcome(home_team_score, away_team_score, overtime, shootout):
     """
     Gets the actual value of the game
     """
     if not shootout and home_team_score > away_team_score:
         return 1
+    elif overtime and home_team_score > away_team_score:
+        return OVERTIME
+    elif overtime and away_team_score > home_team_score:
+        return 1 - OVERTIME
     elif shootout and home_team_score > away_team_score:
         return SHOOTOUT
     elif shootout and away_team_score > home_team_score:
@@ -117,8 +129,8 @@ def get_margin(home_team, away_team, home_team_score, away_team_score):
     return max(1, math.log(abs( gd -.85 * ((home_team.elo - away_team.elo)/100)) + math.e -1))
 
 
-def set_elos(winner, loser, change, winner_score, loser_score, shootout):
-    logger.info(("{winner_name} {winner_score} {loser_name} {loser_score}{shootout}. "
+def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootout):
+    logger.info(("{winner_name} {winner_score} {loser_name} {loser_score}{overtime}{shootout}. "
                  "{winner_name} elo {winner_elo:.1f} + {change:.1f} "
                  "{loser_name} elo {loser_elo:.1f} - {change:.1f}").format(
                      winner_name=winner.name,
@@ -128,6 +140,7 @@ def set_elos(winner, loser, change, winner_score, loser_score, shootout):
                      winner_score=winner_score,
                      loser_score=loser_score,
                      change=change,
+                     overtime=" (OT)" if overtime else ""
                      shootout=" (SO)" if shootout else ""))
     winner.win(change)
     loser.lose(change)
@@ -138,16 +151,17 @@ def process_game(row):
     away_team = teams[row['Away Team']]
     home_team_score = get_score(row['Home Score'])
     away_team_score = get_score(row['Away Score'])
+    overtime = get_overtime(row)
     shootout = get_shootout(row)
     margin = get_margin(home_team, away_team, home_team_score, away_team_score)
-    outcome = get_outcome(home_team_score, away_team_score, shootout)
+    outcome = get_outcome(home_team_score, away_team_score, overtime, shootout)
     expected = get_expected(home_team, away_team)
     change = VELOCITY * margin * (outcome - expected)
 
     if home_team_score > away_team_score:
-        set_elos(home_team, away_team, change, home_team_score, away_team_score, shootout)
+        set_elos(home_team, away_team, change, home_team_score, away_team_score, overtime, shootout)
     elif away_team_score > home_team_score:
-        set_elos(away_team, home_team, -change, away_team_score, home_team_score, shootout)
+        set_elos(away_team, home_team, -change, away_team_score, home_team_score, overtime, shootout)
 
 
 def print_elos(on):
@@ -164,7 +178,7 @@ def plot_elos():
     colors = [team.color for team in sorted_teams.values()]
 
     plt.gca().set_color_cycle(colors)
-    plt.title("MNL Elo, Velocity:{} SO:{}".format(VELOCITY, SHOOTOUT))
+    plt.title("MNL Elo, Velocity:{} OT:{} SO:{}".format(VELOCITY, OVERTIME, SHOOTOUT))
     for team in sorted_teams.values():
         plt.plot(range(team.num_games()), team.full_history())
         legend.append("{}: {}".format(team.name, int(team.elo)))
