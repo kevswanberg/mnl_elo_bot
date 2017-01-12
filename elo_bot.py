@@ -151,7 +151,7 @@ def process_game(row):
     away_team = teams[row['Away Team']]
     home_team_score = get_score(row['Home Score'])
     away_team_score = get_score(row['Away Score'])
-    ot = get_ot(row)
+    overtime = get_overtime(row)
     shootout = get_shootout(row)
     margin = get_margin(home_team, away_team, home_team_score, away_team_score)
     outcome = get_outcome(home_team_score, away_team_score, overtime, shootout)
