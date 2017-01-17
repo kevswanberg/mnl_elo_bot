@@ -140,7 +140,7 @@ def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootou
                      winner_score=winner_score,
                      loser_score=loser_score,
                      change=change,
-                     overtime=" (OT)" if overtime else ""
+                     overtime=" (OT)" if overtime else "",
                      shootout=" (SO)" if shootout else ""))
     winner.win(change)
     loser.lose(change)
