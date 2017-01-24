@@ -1,34 +1,40 @@
 #!/usr/bin/python3
-
+"""
+A robot that downloads stats for MNL creates an image to send to slack.
+Intended to hurt diques feelings
+"""
 import argparse
 import csv
 import datetime
 import io
 import logging
 import math
+from collections import OrderedDict
+import os
+
 try:
     import matplotlib.pyplot as plt
 except ImportError:
     plt = None
-import os
+
 import requests
-
-from collections import OrderedDict
-
 from slackclient import SlackClient
 
 VELOCITY = 13
 SHOOTOUT = 0.6
 OVERTIME = 0.8
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
-slack_client = SlackClient(SLACK_CLIENT_ID)
+SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
 
 
-class Team():
+class Team:
+    """
+    Model to hold ELO histories of each team
+    """
     def __init__(self, name, color):
         self.name = name
         self.elo = 1500
@@ -74,7 +80,7 @@ GOLDEN_SEALS = Team("Golden Seals", "cyan")
 WHALERS = Team("Whalers", "blue")
 NORDIQUES = Team("Nordiques", "red")
 
-teams = {team.name: team for team in [NORTH_STARS, GOLDEN_SEALS, WHALERS, NORDIQUES]}
+TEAMS = {team.name: team for team in [NORTH_STARS, GOLDEN_SEALS, WHALERS, NORDIQUES]}
 
 def get_score(score):
     """
@@ -86,13 +92,13 @@ def get_shootout(row):
     """
     Whether or not the game was decided in a shootout
     """
-    return (('SO' in row['Home Score']) or ('SO' in row['Away Score']))
+    return ('SO' in row['Home Score']) or ('SO' in row['Away Score'])
 
 def get_overtime(row):
     """
     Whether or not the game was decided in overtime
     """
-    return (('OT' in row['Home Score']) or ('OT' in row['Away Score']))
+    return ('OT' in row['Home Score']) or ('OT' in row['Away Score'])
 
 
 
@@ -118,19 +124,20 @@ def get_expected(home_team, away_team):
     """
     get the expected value of a game
     """
-    return (1.0 / (1.0 + 10.0 ** (-(home_team.elo - away_team.elo)/400)))
+    return 1.0 / (1.0 + 10.0 ** (-(home_team.elo - away_team.elo)/400))
 
 
 def get_margin(home_team, away_team, home_team_score, away_team_score):
     """
     Get the multiplier for the margin of victory
     """
-    gd = home_team_score - away_team_score
-    return max(1, math.log(abs( gd -.85 * ((home_team.elo - away_team.elo)/100)) + math.e -1))
+    goal_differential = home_team_score - away_team_score
+    return max(1, math.log(
+        abs(goal_differential -.85 * ((home_team.elo - away_team.elo)/100)) + math.e -1))
 
 
 def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootout):
-    logger.info(("{winner_name} {winner_score} {loser_name} {loser_score}{overtime}{shootout}. "
+    LOGGER.info(("{winner_name} {winner_score} {loser_name} {loser_score}{overtime}{shootout}. "
                  "{winner_name} elo {winner_elo:.1f} + {change:.1f} "
                  "{loser_name} elo {loser_elo:.1f} - {change:.1f}").format(
                      winner_name=winner.name,
@@ -147,8 +154,8 @@ def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootou
 
 
 def process_game(row):
-    home_team = teams[row['Home Team']]
-    away_team = teams[row['Away Team']]
+    home_team = TEAMS[row['Home Team']]
+    away_team = TEAMS[row['Away Team']]
     home_team_score = get_score(row['Home Score'])
     away_team_score = get_score(row['Away Score'])
     overtime = get_overtime(row)
@@ -159,13 +166,17 @@ def process_game(row):
     change = VELOCITY * margin * (outcome - expected)
 
     if home_team_score > away_team_score:
-        set_elos(home_team, away_team, change, home_team_score, away_team_score, overtime, shootout)
+        set_elos(home_team, away_team, change,
+                 home_team_score, away_team_score,
+                 overtime, shootout)
     elif away_team_score > home_team_score:
-        set_elos(away_team, home_team, -change, away_team_score, home_team_score, overtime, shootout)
+        set_elos(away_team, home_team, -change,
+                 away_team_score, home_team_score,
+                 overtime, shootout)
 
 
-def print_elos(on):
-    print(get_print_message(on))
+def print_elos(on_date):
+    print(get_print_message(on_date))
 
 
 def plot_elos():
@@ -174,7 +185,7 @@ def plot_elos():
     """
     assert plt != None, "Matplotlib was not able to be imported"
     legend = []
-    sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
+    sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
     colors = [team.color for team in sorted_teams.values()]
 
     plt.gca().set_color_cycle(colors)
@@ -191,20 +202,23 @@ def plot_elos():
 
 def get_print_message(on):
     message = "MNL Elo ratings for {:%m/%d/%Y}\n".format(on)
-    sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
+    sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
     for team in sorted_teams.values():
         message += team.last_game_explanation()+"\n"
     return message
 
 
 def post_elos_to_slack(link, on, channel="tests"):
-    slack_client.api_call(
+    SLACK_CLIENT.api_call(
         'chat.postMessage',
         channel=channel,
         text=get_print_message(on),
-        attachments=[{"image_url":link,
-                      "title":"Current Elo ratings"
-        }],
+        attachments=[
+            {
+                "image_url":link,
+                "title":"Current Elo ratings"
+            }
+        ],
         as_user=True)
 
 def upload_picture_to_imgur(image):
@@ -228,24 +242,29 @@ def get_raw_results_reader():
     buf.seek(0)
     return csv.DictReader(buf)
 
-
-parser = argparse.ArgumentParser(
-    description=("Download latest MNL results and calculate ratings and post to slack"))
-parser.add_argument('--post', action='store_true')
-parser.add_argument('--channel', default="tests")
-args = parser.parse_args()
-
-if __name__ == '__main__':
-    for row in get_raw_results_reader():
+def process_results(results):
+    for row in results:
         try:
             process_game(row)
         except IndexError:
             break
 
     last = datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
-    if args.post:
+    if ARGS.post:
         image = plot_elos()
         link = upload_picture_to_imgur(image)
-        post_elos_to_slack(link, last, args.channel)
+        post_elos_to_slack(link, last, ARGS.channel)
     else:
         print_elos(last)
+
+PARSER = argparse.ArgumentParser(
+    description=("Download latest MNL results and calculate ratings and post to slack"))
+PARSER.add_argument('--post', action='store_true')
+PARSER.add_argument('--channel', default="tests")
+ARGS = PARSER.parse_args()
+
+
+
+if __name__ == '__main__':
+
+    process_results(get_raw_results_reader())
