@@ -2,6 +2,7 @@
 """
 A robot that downloads stats for MNL creates an image to send to slack.
 Intended to hurt diques feelings
+F#&$ You, Kevan
 """
 import argparse
 import csv
@@ -75,12 +76,12 @@ class Team:
             self.latest_change())
 
 
-NORTH_STARS = Team("North Stars", "green")
-GOLDEN_SEALS = Team("Golden Seals", "cyan")
-WHALERS = Team("Whalers", "blue")
-NORDIQUES = Team("Nordiques", "red")
+HIGH_STICKS = Team("High Sticks", "green")
+ICEBERGS = Team("Icebergs", "blue")
+BOOKHOCKEY = Team("BookHockey", "cyan")
+WHEELING_NAILERS = Team("Wheeling Nailers", "red")
 
-TEAMS = {team.name: team for team in [NORTH_STARS, GOLDEN_SEALS, WHALERS, NORDIQUES]}
+TEAMS = {team.name: team for team in [HIGH_STICKS, ICEBERGS, BOOKHOCKEY, WHEELING_NAILERS]}
 
 def get_score(score):
     """
@@ -234,9 +235,9 @@ def upload_picture_to_imgur(image):
 def get_raw_results_reader():
     response = requests.get(
         ("https://docs.google.com/spreadsheets"
-         "/u/1/d/1JcjwMdsjzPI-WesV6l4O0eThWGVU"
-         "AvN7-Z7lTrUG_iY/export?format=csv&"
-         "id=1JcjwMdsjzPI-WesV6l4O0eThWGVUAvN7-Z7lTrUG_iY&gid=0"))
+         "/d/1Lo65fOUp1ZTWTYhYUeZYf6CivhsDegq9-"
+         "4z4xgZbBO8/pub?gid=0&"
+         "single=true&output=csv"))
     buf = io.StringIO()
     buf.write(response.content.decode())
     buf.seek(0)
