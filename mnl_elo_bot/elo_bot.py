@@ -76,10 +76,10 @@ class Team:
             self.latest_change())
 
 
-HIGH_STICKS = Team("High Sticks", "green")
+HIGH_STICKS = Team("The High Sticks", "green")
 ICEBERGS = Team("Icebergs", "blue")
 BOOKHOCKEY = Team("BookHockey", "cyan")
-WHEELING_NAILERS = Team("Wheeling Nailers", "red")
+WHEELING_NAILERS = Team("The Wheeling Nailers", "red")
 
 TEAMS = {team.name: team for team in [HIGH_STICKS, ICEBERGS, BOOKHOCKEY, WHEELING_NAILERS]}
 
@@ -155,6 +155,8 @@ def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootou
 
 
 def process_game(row):
+    if not row.get('Home Team'):
+        return
     home_team = TEAMS[row['Home Team']]
     away_team = TEAMS[row['Away Team']]
     home_team_score = get_score(row['Home Score'])
