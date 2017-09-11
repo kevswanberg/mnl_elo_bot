@@ -157,6 +157,8 @@ def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootou
 
 
 def process_game(row):
+    if not row.get('Home Team'):
+        return
     home_team = TEAMS[row['Home Team']]
     away_team = TEAMS[row['Away Team']]
     home_team_score = get_score(row['Home Score'])
