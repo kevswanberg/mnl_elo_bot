@@ -76,12 +76,14 @@ class Team:
             self.latest_change())
 
 
-HIGH_STICKS = Team("High Sticks", "green")
-ICEBERGS = Team("Icebergs", "blue")
-BOOKHOCKEY = Team("BookHockey", "cyan")
-WHEELING_NAILERS = Team("Wheeling Nailers", "red")
+AMERICANS = Team("Americans", "red")
+MIGHTY_DUCKS = Team("Mighty Ducks", "magenta")
+NORTH_STARS = Team("North Stars", "black")
+WHALERS = Team("Whalers", "green")
+GOLDEN_SEALS = Team("Golden Seals", "yellow")
+NORDIQUES = Team("Nordiques", "cyan")
 
-TEAMS = {team.name: team for team in [HIGH_STICKS, ICEBERGS, BOOKHOCKEY, WHEELING_NAILERS]}
+TEAMS = {team.name: team for team in [AMERICANS, MIGHTY_DUCKS, NORTH_STARS, WHALERS, GOLDEN_SEALS, NORDIQUES]}
 
 def get_score(score):
     """
@@ -235,8 +237,8 @@ def upload_picture_to_imgur(image):
 def get_raw_results_reader():
     response = requests.get(
         ("https://docs.google.com/spreadsheets"
-         "/d/1Lo65fOUp1ZTWTYhYUeZYf6CivhsDegq9-"
-         "4z4xgZbBO8/pub?gid=0&"
+         "/d/1RIyVc1_oHFueUpZbnrFtMGXraZfEh-"
+         "bEkbz24GHr9OU/pub?gid=0&"
          "single=true&output=csv"))
     buf = io.StringIO()
     buf.write(response.content.decode())
