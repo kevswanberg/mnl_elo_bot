@@ -85,6 +85,7 @@ NORDIQUES = Team("Nordiques", "cyan")
 
 TEAMS = {team.name: team for team in [AMERICANS, MIGHTY_DUCKS, NORTH_STARS, WHALERS, GOLDEN_SEALS, NORDIQUES]}
 
+
 def get_score(score):
     """
     Get the score in the from the csv string
