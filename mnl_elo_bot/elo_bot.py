@@ -241,8 +241,8 @@ def get_raw_results_reader():
     response = requests.get(
         ("https://docs.google.com/spreadsheets"
          "/d/1RIyVc1_oHFueUpZbnrFtMGXraZfEh-"
-         "bEkbz24GHr9OU/pub?gid=0&"
-         "single=true&output=csv"))
+         "bEkbz24GHr9OU/export?format=csv&gid=0")
+    )
     buf = io.StringIO()
     buf.write(response.content.decode())
     buf.seek(0)
@@ -254,7 +254,7 @@ def process_results(results):
             process_game(row)
         except IndexError:
             break
-
+    print(row)
     last = datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
     if ARGS.post:
         image = plot_elos()
