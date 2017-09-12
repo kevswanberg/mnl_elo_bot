@@ -254,7 +254,6 @@ def process_results(results):
             process_game(row)
         except IndexError:
             break
-    print(row)
     last = datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
     if ARGS.post:
         image = plot_elos()
