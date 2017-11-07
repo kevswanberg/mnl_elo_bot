@@ -26,6 +26,7 @@ SHOOTOUT = 0.6
 OVERTIME = 0.8
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
 SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
@@ -83,7 +84,8 @@ WHALERS = Team("Whalers", "green")
 GOLDEN_SEALS = Team("Golden Seals", "yellow")
 NORDIQUES = Team("Nordiques", "cyan")
 
-TEAMS = {team.name: team for team in [AMERICANS, MIGHTY_DUCKS, NORTH_STARS, WHALERS, GOLDEN_SEALS, NORDIQUES]}
+TEAMS = {team.name: team for team in [AMERICANS, MIGHTY_DUCKS,
+                                      NORTH_STARS, WHALERS, GOLDEN_SEALS, NORDIQUES]}
 
 
 def get_score(score):
@@ -92,18 +94,19 @@ def get_score(score):
     """
     return int(score.split()[0])
 
+
 def get_shootout(row):
     """
     Whether or not the game was decided in a shootout
     """
     return ('SO' in row['Home Score']) or ('SO' in row['Away Score'])
 
+
 def get_overtime(row):
     """
     Whether or not the game was decided in overtime
     """
     return ('OT' in row['Home Score']) or ('OT' in row['Away Score'])
-
 
 
 def get_outcome(home_team_score, away_team_score, overtime, shootout):
@@ -137,7 +140,8 @@ def get_margin(home_team, away_team, home_team_score, away_team_score):
     """
     goal_differential = home_team_score - away_team_score
     return max(1, math.log(
-        abs(goal_differential -.85 * ((home_team.elo - away_team.elo)/100)) + math.e -1))
+        abs(goal_differential - .85 * ((home_team.elo - away_team.elo)/100)) + math.e - 1)
+    )
 
 
 def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootout):
@@ -158,8 +162,6 @@ def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootou
 
 
 def process_game(row):
-    if not row.get('Home Team'):
-        return
     home_team = TEAMS[row['Home Team']]
     away_team = TEAMS[row['Away Team']]
     home_team_score = get_score(row['Home Score'])
@@ -179,6 +181,8 @@ def process_game(row):
         set_elos(away_team, home_team, -change,
                  away_team_score, home_team_score,
                  overtime, shootout)
+    else:
+        raise Exception('THERE ARE NO TIES')
 
 
 def print_elos(on_date):
@@ -189,7 +193,7 @@ def plot_elos():
     """
     Returns an in memory PNG of the picture of our teams ratings
     """
-    assert plt != None, "Matplotlib was not able to be imported"
+    assert plt is not None, "Matplotlib was not able to be imported"
     legend = []
     sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
     colors = [team.color for team in sorted_teams.values()]
@@ -221,21 +225,23 @@ def post_elos_to_slack(link, on, channel="tests"):
         text=get_print_message(on),
         attachments=[
             {
-                "image_url":link,
-                "title":"Current Elo ratings"
+                "image_url": link,
+                "title": "Current Elo ratings"
             }
         ],
         as_user=True)
 
+
 def upload_picture_to_imgur(image):
     response = requests.post(
         "https://api.imgur.com/3/image",
-        files={"image":image},
+        files={"image": image},
         headers={
             "Authorization": "Client-ID {}".format(IMGUR_CLIENT_ID)
         }
     )
     return response.json()['data']['link']
+
 
 def get_raw_results_reader():
     response = requests.get(
@@ -248,9 +254,12 @@ def get_raw_results_reader():
     buf.seek(0)
     return csv.DictReader(buf)
 
+
 def process_results(results):
     for row in results:
         try:
+            if not row.get('Home Team'):  # bye week
+                continue
             process_game(row)
         except IndexError:
             break
@@ -262,6 +271,7 @@ def process_results(results):
     else:
         print_elos(last)
 
+
 PARSER = argparse.ArgumentParser(
     description=("Download latest MNL results and calculate ratings and post to slack"))
 PARSER.add_argument('--post', action='store_true')
@@ -269,7 +279,7 @@ PARSER.add_argument('--channel', default="tests")
 ARGS = PARSER.parse_args()
 
 
-
 if __name__ == '__main__':
-
     process_results(get_raw_results_reader())
+    for team in TEAMS.values():
+        print(len(team.history))
