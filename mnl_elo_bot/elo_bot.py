@@ -39,35 +39,34 @@ class Team:
     """
     def __init__(self, name, color):
         self.name = name
-        self.elo = 1500
-        self.history = []
+        self.history = [1500]
         self.color = color
+
+    @property
+    def elo(self):
+        return self.history[-1]
 
     def __str__(self):
         return self.name
 
     def win(self, change):
-        self.history.append(self.elo)
-        self.elo += change
+        self.history.append(self.elo + change)
 
     def lose(self, change):
-        self.history.append(self.elo)
-        self.elo -= change
-
-    def full_history(self):
-        return self.history + [self.elo]
-
-    def num_games(self):
-        return len(self.full_history())
+        self.history.append(self.elo - change)
 
     def last_game_up_or_down(self):
         if self.latest_change() < 0:
             return "goes down to"
-        else:
+        elif self.latest_change() > 0:
             return "goes up to"
+        else:
+            return "is at"
 
     def latest_change(self):
-        return self.elo - self.history[-1]
+        if len(self.history) < 2:
+            return 0.0
+        return self.elo - self.history[-2]
 
     def last_game_explanation(self):
         return "{} rating {} {:.1f} ({:.1f})".format(
@@ -201,7 +200,7 @@ def plot_elos():
     plt.gca().set_color_cycle(colors)
     plt.title("MNL Elo, Velocity:{} OT:{} SO:{}".format(VELOCITY, OVERTIME, SHOOTOUT))
     for team in sorted_teams.values():
-        plt.plot(range(team.num_games()), team.full_history())
+        plt.plot(range(len(team.history)), team.history)
         legend.append("{}: {}".format(team.name, int(team.elo)))
     plt.legend(legend, loc='upper left')
     buf = io.BytesIO()
@@ -245,9 +244,10 @@ def upload_picture_to_imgur(image):
 
 def get_raw_results_reader():
     response = requests.get(
-        ("https://docs.google.com/spreadsheets"
-         "/d/1RIyVc1_oHFueUpZbnrFtMGXraZfEh-"
-         "bEkbz24GHr9OU/export?format=csv&gid=0")
+        (
+            "https://docs.google.com/spreadsheets/d/"
+            "1RIyVc1_oHFueUpZbnrFtMGXraZfEh-bEkbz24GHr9OU/export?format=csv&gid=0"
+        )
     )
     buf = io.StringIO()
     buf.write(response.content.decode())
@@ -281,5 +281,3 @@ ARGS = PARSER.parse_args()
 
 if __name__ == '__main__':
     process_results(get_raw_results_reader())
-    for team in TEAMS.values():
-        print(len(team.history))
