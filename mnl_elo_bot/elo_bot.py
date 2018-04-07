@@ -76,15 +76,13 @@ class Team:
             self.latest_change())
 
 
-AMERICANS = Team("Americans", "red")
-MIGHTY_DUCKS = Team("Mighty Ducks", "magenta")
-NORTH_STARS = Team("North Stars", "black")
-WHALERS = Team("Whalers", "green")
-GOLDEN_SEALS = Team("Golden Seals", "yellow")
-NORDIQUES = Team("Nordiques", "cyan")
+SUGAR_CUBES = Team("Sugar Cubes", "dark lavender")
+SHAKES = Team("Shakes", "mint green")
+CLAWS_PAWS = Team("Claw's Paws", "orange")
+WHEELIN_TAYLORS = Team("Wheelin' Taylors", "light brown")
 
-TEAMS = {team.name: team for team in [AMERICANS, MIGHTY_DUCKS,
-                                      NORTH_STARS, WHALERS, GOLDEN_SEALS, NORDIQUES]}
+TEAMS = {team.name: team for team in [SUGAR_CUBES, SHAKES,
+                                      CLAWS_PAWS, WHEELIN_TAYLORS]}
 
 
 def get_score(score):
@@ -246,7 +244,7 @@ def get_raw_results_reader():
     response = requests.get(
         (
             "https://docs.google.com/spreadsheets/d/"
-            "1RIyVc1_oHFueUpZbnrFtMGXraZfEh-bEkbz24GHr9OU/export?format=csv&gid=0"
+            "1WClOUoLELrxeNaM1RsbCmuuvXLOymLpHrcTpEqiKTJw/export?format=csv&gid=834633730"
         )
     )
     buf = io.StringIO()
