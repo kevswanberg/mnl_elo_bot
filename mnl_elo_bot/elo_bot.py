@@ -78,7 +78,7 @@ class Team:
 
 SUGAR_CUBES = Team("Sugar Cubes", "dark lavender")
 SHAKES = Team("Shakes", "mint green")
-CLAWS_PAWS = Team("Claw's Paws", "orange")
+CLAWS_PAWS = Team("CLAWZ PAWZ", "orange")
 WHEELIN_TAYLORS = Team("Wheelin' Taylors", "light brown")
 
 TEAMS = {team.name: team for team in [SUGAR_CUBES, SHAKES,
