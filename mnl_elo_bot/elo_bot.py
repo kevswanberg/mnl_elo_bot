@@ -76,10 +76,10 @@ class Team:
             self.latest_change())
 
 
-SUGAR_CUBES = Team("Sugar Cubes", "dark lavender")
-SHAKES = Team("Shakes", "mint green")
-CLAWS_PAWS = Team("CLAWZ PAWZ", "orange")
-WHEELIN_TAYLORS = Team("Wheelin' Taylors", "light brown")
+SUGAR_CUBES = Team("Sugar Cubes", "xkcd:dark lavender")
+SHAKES = Team("Shakes", "xkcd:mint green")
+CLAWS_PAWS = Team("CLAWZ PAWZ", "xkcd:orange")
+WHEELIN_TAYLORS = Team("Wheelin' Taylors", "xkcd:light brown")
 
 TEAMS = {team.name: team for team in [SUGAR_CUBES, SHAKES,
                                       CLAWS_PAWS, WHEELIN_TAYLORS]}
