@@ -31,6 +31,7 @@ LOGGER.setLevel(logging.DEBUG)
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
 SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
+CSV_ID = "1MWKxBdUF8HegOtyjkznthRbGB42F2xrUD_Iryzv7ShQ"
 
 
 class Team:
@@ -76,13 +77,21 @@ class Team:
             self.latest_change())
 
 
-SUGAR_CUBES = Team("Sugar Cubes", "xkcd:dark lavender")
-SHAKES = Team("Shakes", "xkcd:mint green")
-CLAWS_PAWS = Team("CLAWZ PAWZ", "xkcd:orange")
-WHEELIN_TAYLORS = Team("Wheelin' Taylors", "xkcd:light brown")
+NORTH_STARS = Team("North Stars", "#000000")
+GOLDEN_SEALS = Team("Golden Seals", "#ffd966")
+NORDIQUES = Team("Nordiques", "#a4c2f4")
+WHALERS = Team("Whalers", "#6aa84f")
+MIGHTY_DUCKS = Team("Mighty Ducks", "#b4a7d6")
+AMERICANS = Team("Americans", "#dd7e6b")
 
-TEAMS = {team.name: team for team in [SUGAR_CUBES, SHAKES,
-                                      CLAWS_PAWS, WHEELIN_TAYLORS]}
+TEAMS = {team.name: team for team in [
+    NORTH_STARS,
+    GOLDEN_SEALS,
+    NORDIQUES,
+    WHALERS,
+    MIGHTY_DUCKS,
+    AMERICANS
+]}
 
 
 def get_score(score):
@@ -196,10 +205,12 @@ def plot_elos():
     colors = [team.color for team in sorted_teams.values()]
 
     plt.gca().set_color_cycle(colors)
+
     plt.title("MNL Elo, Velocity:{} OT:{} SO:{}".format(VELOCITY, OVERTIME, SHOOTOUT))
     for team in sorted_teams.values():
         plt.plot(range(len(team.history)), team.history)
         legend.append("{}: {}".format(team.name, int(team.elo)))
+    plt.xticks(range(len(team.history)))
     plt.legend(legend, loc='upper left')
     buf = io.BytesIO()
     plt.savefig(buf)
@@ -208,7 +219,8 @@ def plot_elos():
 
 
 def get_print_message(on):
-    message = "MNL Elo ratings for {:%m/%d/%Y}\n".format(on)
+    message = ARGS.message + "\n" if ARGS.message else ""
+    message += "MNL Elo ratings for {:%m/%d/%Y}\n".format(on)
     sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
     for team in sorted_teams.values():
         message += team.last_game_explanation()+"\n"
@@ -216,6 +228,7 @@ def get_print_message(on):
 
 
 def post_elos_to_slack(link, on, channel="tests"):
+
     SLACK_CLIENT.api_call(
         'chat.postMessage',
         channel=channel,
@@ -245,9 +258,8 @@ def upload_picture_to_imgur(image):
 
 def get_raw_results_reader():
     response = requests.get(
-        (
-            "https://docs.google.com/spreadsheets/d/"
-            "1WClOUoLELrxeNaM1RsbCmuuvXLOymLpHrcTpEqiKTJw/export?format=csv&gid=834633730"
+        "https://docs.google.com/spreadsheets/d/{}/export?format=csv&gid=834633730".format(
+            CSV_ID
         )
     )
     buf = io.StringIO()
@@ -277,6 +289,8 @@ PARSER = argparse.ArgumentParser(
     description=("Download latest MNL results and calculate ratings and post to slack"))
 PARSER.add_argument('--post', action='store_true')
 PARSER.add_argument('--channel', default="tests")
+PARSER.add_argument('--message', default=None)
+
 ARGS = PARSER.parse_args()
 
 
