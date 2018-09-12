@@ -237,7 +237,10 @@ def upload_picture_to_imgur(image):
             "Authorization": "Client-ID {}".format(IMGUR_CLIENT_ID)
         }
     )
-    return response.json()['data']['link']
+    if response.status_code == 200:
+        return response.json()['data']['link']
+    else:
+        raise Exception("Couldn't upload picture response \n{}".format(response.content.decode()))
 
 
 def get_raw_results_reader():
