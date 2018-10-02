@@ -3,6 +3,7 @@
 A robot that downloads stats for MNL creates an image to send to slack.
 Intended to hurt diques feelings
 F#&$ You, Kevan
+Wow this stopped working
 """
 import argparse
 import csv
@@ -38,10 +39,11 @@ class Team:
     """
     Model to hold ELO histories of each team
     """
-    def __init__(self, name, color):
+    def __init__(self, name, color, emoji):
         self.name = name
         self.history = [1500]
         self.color = color
+        self.emoji = emoji
 
     @property
     def elo(self):
@@ -56,33 +58,35 @@ class Team:
     def lose(self, change):
         self.history.append(self.elo - change)
 
-    def last_game_up_or_down(self):
-        if self.latest_change() < 0:
-            return "goes down to"
-        elif self.latest_change() > 0:
-            return "goes up to"
-        else:
-            return "is at"
-
+    @property
     def latest_change(self):
         if len(self.history) < 2:
             return 0.0
         return self.elo - self.history[-2]
 
     def last_game_explanation(self):
-        return "{} rating {} {:.1f} ({:.1f})".format(
-            self.name,
-            self.last_game_up_or_down(),
-            self.elo,
-            self.latest_change())
+        if self.latest_change > 0:
+            return "{} rating goes up to {:.1f} ({:.1f})".format(
+                self.name,
+                self.elo,
+                self.latest_change
+            )
+        elif self.latest_change < 0:
+            return "{} rating goes down to {:.1f} ({:.1f})".format(
+                self.name,
+                self.elo,
+                self.latest_change
+            )
+        else:
+            "{} rating is at {}".format(self.name, self.elo)
 
 
-NORTH_STARS = Team("North Stars", "#000000")
-GOLDEN_SEALS = Team("Golden Seals", "#ffd966")
-NORDIQUES = Team("Nordiques", "#a4c2f4")
-WHALERS = Team("Whalers", "#6aa84f")
-MIGHTY_DUCKS = Team("Mighty Ducks", "#b4a7d6")
-AMERICANS = Team("Americans", "#dd7e6b")
+NORTH_STARS = Team("North Stars", "#000000", ":north-stars:")
+GOLDEN_SEALS = Team("Golden Seals", "#ffd966", ":seals:")
+NORDIQUES = Team("Nordiques", "#a4c2f4", ":nordiques:")
+WHALERS = Team("Whalers", "#6aa84f", ":whalers:")
+MIGHTY_DUCKS = Team("Mighty Ducks", "#b4a7d6", ":mighty_ducks:")
+AMERICANS = Team("Americans", "#dd7e6b", ":america:")
 
 TEAMS = {team.name: team for team in [
     NORTH_STARS,
@@ -219,11 +223,19 @@ def plot_elos():
 
 
 def get_print_message(on):
+    winner_icons = []
     message = ARGS.message + "\n" if ARGS.message else ""
     message += "MNL Elo ratings for {:%m/%d/%Y}\n".format(on)
+    for team in TEAMS.values():
+        if team.latest_change > 0:
+            winner_icons.append(team.emoji)
+
+    message += "  ".join(winner_icons)
+    message += "\n"
     sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
     for team in sorted_teams.values():
         message += team.last_game_explanation()+"\n"
+
     return message
 
 
