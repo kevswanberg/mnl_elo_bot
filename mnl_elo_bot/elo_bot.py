@@ -11,6 +11,9 @@ import datetime
 import io
 import logging
 import math
+import png
+import numpy
+
 from collections import OrderedDict
 import os
 
@@ -289,10 +292,20 @@ def process_results(results):
         except IndexError:
             break
     last = datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
+    image = plot_elos()
     if ARGS.post:
-        image = plot_elos()
         link = upload_picture_to_imgur(image)
         post_elos_to_slack(link, last, ARGS.channel)
+    if ARGS.save:
+        with open('out.png', 'wb') as out:
+            reader = png.Reader(image)
+            w, h, pixels, metadata = reader.read_flat()
+            p = set()
+            for y, row in enumerate(numpy.array_split(pixels, 480)[-1:]):
+                for x, col in enumerate(numpy.array_split(pixels, len(pixels)/4)):
+                    p.add(tuple(col))
+            print(len(p))
+
     else:
         print_elos(last)
 
@@ -302,6 +315,7 @@ PARSER = argparse.ArgumentParser(
 PARSER.add_argument('--post', action='store_true')
 PARSER.add_argument('--channel', default="tests")
 PARSER.add_argument('--message', default=None)
+PARSER.add_argument('--save', action='store_true', default=False)
 
 ARGS = PARSER.parse_args()
 
