@@ -211,7 +211,7 @@ def plot_elos():
     sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
     colors = [team.color for team in sorted_teams.values()]
 
-    plt.gca().set_color_cycle(colors)
+    plt.gca().set_prop_cycle('color', colors)
 
     plt.title("MNL Elo, Velocity:{} OT:{} SO:{}".format(VELOCITY, OVERTIME, SHOOTOUT))
     for team in sorted_teams.values():
