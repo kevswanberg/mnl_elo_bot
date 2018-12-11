@@ -36,6 +36,7 @@ SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
 SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
 CSV_ID = "1MWKxBdUF8HegOtyjkznthRbGB42F2xrUD_Iryzv7ShQ"
+print(IMGUR_CLIENT_ID)
 
 
 class Team:
@@ -69,19 +70,11 @@ class Team:
 
     def last_game_explanation(self):
         if self.latest_change > 0:
-            return "{} rating goes up to {:.1f} ({:.1f})".format(
-                self.name,
-                self.elo,
-                self.latest_change
-            )
+            return f"{self.name} rating goes up to {self.elo:.1f} ({self.latest_change:.1f})"
         elif self.latest_change < 0:
-            return "{} rating goes down to {:.1f} ({:.1f})".format(
-                self.name,
-                self.elo,
-                self.latest_change
-            )
+            return f"{self.name} rating goes down to {self.elo:.1f} ({self.latest_change:.1f})"
         else:
-            "{} rating is at {}".format(self.name, self.elo)
+            return f"{self.name} rating is at {self.elo}"
 
 
 NORTH_STARS = Team("North Stars", "#000000", ":north-stars:")
@@ -158,18 +151,16 @@ def get_margin(home_team, away_team, home_team_score, away_team_score):
 
 
 def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootout):
-    LOGGER.info(("{winner_name} {winner_score} {loser_name} {loser_score}{overtime}{shootout}. "
-                 "{winner_name} elo {winner_elo:.1f} + {change:.1f} "
-                 "{loser_name} elo {loser_elo:.1f} - {change:.1f}").format(
-                     winner_name=winner.name,
-                     winner_elo=winner.elo,
-                     loser_name=loser.name,
-                     loser_elo=loser.elo,
-                     winner_score=winner_score,
-                     loser_score=loser_score,
-                     change=change,
-                     overtime=" (OT)" if overtime else "",
-                     shootout=" (SO)" if shootout else ""))
+    ot_so = ""
+    if overtime:
+        ot_so = "(OT)"
+    elif shootout:
+        ot_so = "(SO)"
+
+    LOGGER.info(f"""{winner.name} {winner_score} {loser.name} {loser_score} {ot_so}.
+    {winner.name} elo {winner.elo:.1f} + {change:.1f}
+    {loser.name} elo {loser.elo:.1f} - {change:.1f}""")
+
     winner.win(change)
     loser.lose(change)
 
@@ -213,10 +204,10 @@ def plot_elos():
 
     plt.gca().set_prop_cycle('color', colors)
 
-    plt.title("MNL Elo, Velocity:{} OT:{} SO:{}".format(VELOCITY, OVERTIME, SHOOTOUT))
+    plt.title(f"MNL Elo, Velocity:{VELOCITY} OT:{OVERTIME} SO:{SHOOTOUT}")
     for team in sorted_teams.values():
         plt.plot(range(len(team.history)), team.history)
-        legend.append("{}: {}".format(team.name, int(team.elo)))
+        legend.append(f"{team.name}: {team.elo}")
     plt.xticks(range(len(team.history)))
     plt.legend(legend, loc='upper left')
     buf = io.BytesIO()
@@ -228,7 +219,7 @@ def plot_elos():
 def get_print_message(on):
     winner_icons = []
     message = ARGS.message + "\n" if ARGS.message else ""
-    message += "MNL Elo ratings for {:%m/%d/%Y}\n".format(on)
+    message += f"MNL Elo ratings for {on:%m/%d/%Y}\n"
     for team in TEAMS.values():
         if team.latest_change > 0:
             winner_icons.append(team.emoji)
@@ -262,20 +253,19 @@ def upload_picture_to_imgur(image):
         "https://api.imgur.com/3/image",
         files={"image": image},
         headers={
-            "Authorization": "Client-ID {}".format(IMGUR_CLIENT_ID)
+            "Authorization": f"Client-ID {IMGUR_CLIENT_ID}"
         }
     )
     if response.status_code == 200:
         return response.json()['data']['link']
     else:
-        raise Exception("Couldn't upload picture response \n{}".format(response.content.decode()))
+        raise Exception(f"Couldn't upload picture response \n{response.content.decode()}")
 
 
 def get_raw_results_reader():
     response = requests.get(
-        "https://docs.google.com/spreadsheets/d/{}/export?format=csv&gid=834633730".format(
-            CSV_ID
-        )
+        f"https://docs.google.com/spreadsheets/d/{CSV_ID}/export?format=csv&gid=834633730"
+
     )
     buf = io.StringIO()
     buf.write(response.content.decode())
@@ -296,16 +286,6 @@ def process_results(results):
     if ARGS.post:
         link = upload_picture_to_imgur(image)
         post_elos_to_slack(link, last, ARGS.channel)
-    if ARGS.save:
-        with open('out.png', 'wb') as out:
-            reader = png.Reader(image)
-            w, h, pixels, metadata = reader.read_flat()
-            p = set()
-            for y, row in enumerate(numpy.array_split(pixels, 480)[-1:]):
-                for x, col in enumerate(numpy.array_split(pixels, len(pixels)/4)):
-                    p.add(tuple(col))
-            print(len(p))
-
     else:
         print_elos(last)
 
@@ -315,7 +295,6 @@ PARSER = argparse.ArgumentParser(
 PARSER.add_argument('--post', action='store_true')
 PARSER.add_argument('--channel', default="tests")
 PARSER.add_argument('--message', default=None)
-PARSER.add_argument('--save', action='store_true', default=False)
 
 ARGS = PARSER.parse_args()
 
