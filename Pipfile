@@ -23,6 +23,8 @@ urllib3 = "*"
 websocket-client = "*"
 Cycler = "*"
 pypng = "*"
+flask = "*"
+python-dotenv = "*"
 
 [requires]
 python_version = "3.7"

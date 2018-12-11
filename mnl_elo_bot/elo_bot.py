@@ -11,9 +11,6 @@ import datetime
 import io
 import logging
 import math
-import png
-import numpy
-
 from collections import OrderedDict
 import os
 
@@ -36,7 +33,6 @@ SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
 SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
 CSV_ID = "1MWKxBdUF8HegOtyjkznthRbGB42F2xrUD_Iryzv7ShQ"
-print(IMGUR_CLIENT_ID)
 
 
 class Team:
@@ -189,8 +185,8 @@ def process_game(row):
         raise Exception('THERE ARE NO TIES')
 
 
-def print_elos(on_date):
-    print(get_print_message(on_date))
+def print_elos(on_date, message):
+    print(get_print_message(on_date, message))
 
 
 def plot_elos():
@@ -216,9 +212,8 @@ def plot_elos():
     return buf
 
 
-def get_print_message(on):
+def get_print_message(on, message):
     winner_icons = []
-    message = ARGS.message + "\n" if ARGS.message else ""
     message += f"MNL Elo ratings for {on:%m/%d/%Y}\n"
     for team in TEAMS.values():
         if team.latest_change > 0:
@@ -233,12 +228,11 @@ def get_print_message(on):
     return message
 
 
-def post_elos_to_slack(link, on, channel="tests"):
-
+def post_elos_to_slack(link, on, channel="tests", message=""):
     SLACK_CLIENT.api_call(
         'chat.postMessage',
         channel=channel,
-        text=get_print_message(on),
+        text=get_print_message(on, message),
         attachments=[
             {
                 "image_url": link,
@@ -274,6 +268,9 @@ def get_raw_results_reader():
 
 
 def process_results(results):
+    """
+    Populate the TEAMS dictionary with the ELOS after the results of each game.
+    """
     for row in results:
         try:
             if not row.get('Home Team'):  # bye week
@@ -281,23 +278,21 @@ def process_results(results):
             process_game(row)
         except IndexError:
             break
-    last = datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
-    image = plot_elos()
-    if ARGS.post:
-        link = upload_picture_to_imgur(image)
-        post_elos_to_slack(link, last, ARGS.channel)
-    else:
-        print_elos(last)
-
-
-PARSER = argparse.ArgumentParser(
-    description=("Download latest MNL results and calculate ratings and post to slack"))
-PARSER.add_argument('--post', action='store_true')
-PARSER.add_argument('--channel', default="tests")
-PARSER.add_argument('--message', default=None)
-
-ARGS = PARSER.parse_args()
+    return datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
 
 
 if __name__ == '__main__':
-    process_results(get_raw_results_reader())
+    PARSER = argparse.ArgumentParser(
+        description=("Download latest MNL results and calculate ratings and post to slack"))
+    PARSER.add_argument('--post', action='store_true')
+    PARSER.add_argument('--channel', default="tests")
+    PARSER.add_argument('--message', default=None)
+
+    ARGS = PARSER.parse_args()
+    last = process_results(get_raw_results_reader())
+    image = plot_elos()
+    if ARGS.post:
+        link = upload_picture_to_imgur(image)
+        post_elos_to_slack(link, last, ARGS.channel, ARGS.MESSAGE)
+    else:
+        print_elos(last, ARGS.MESSAGE)
