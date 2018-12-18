@@ -203,7 +203,7 @@ def plot_elos():
     plt.title(f"MNL Elo, Velocity:{VELOCITY} OT:{OVERTIME} SO:{SHOOTOUT}")
     for team in sorted_teams.values():
         plt.plot(range(len(team.history)), team.history)
-        legend.append(f"{team.name}: {team.elo}")
+        legend.append(f"{team.name}: {team.elo:.1f}")
     plt.xticks(range(len(team.history)))
     plt.legend(legend, loc='upper left')
     buf = io.BytesIO()
@@ -270,6 +270,7 @@ def get_raw_results_reader():
 def process_results(results):
     """
     Populate the TEAMS dictionary with the ELOS after the results of each game.
+    returns the date of the latest game played
     """
     for row in results:
         try:
