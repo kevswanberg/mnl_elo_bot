@@ -16,7 +16,8 @@ import os
 
 try:
     import matplotlib.pyplot as plt
-except ImportError:
+except ImportError as e:
+    print(e)
     plt = None
 
 import requests
@@ -32,7 +33,7 @@ LOGGER.setLevel(logging.DEBUG)
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
 SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
-CSV_ID = "1MWKxBdUF8HegOtyjkznthRbGB42F2xrUD_Iryzv7ShQ"
+CSV_ID = "11HKFGPgWCA3g8auTNNSqVtyKk6WBuV7UeRYarVTBHvk"
 
 
 class Team:
@@ -73,20 +74,11 @@ class Team:
             return f"{self.name} rating is at {self.elo}"
 
 
-NORTH_STARS = Team("North Stars", "#000000", ":north-stars:")
-GOLDEN_SEALS = Team("Golden Seals", "#ffd966", ":seals:")
-NORDIQUES = Team("Nordiques", "#a4c2f4", ":nordiques:")
-WHALERS = Team("Whalers", "#6aa84f", ":whalers:")
-MIGHTY_DUCKS = Team("Mighty Ducks", "#b4a7d6", ":mighty_ducks:")
-AMERICANS = Team("Americans", "#dd7e6b", ":america:")
-
 TEAMS = {team.name: team for team in [
-    NORTH_STARS,
-    GOLDEN_SEALS,
-    NORDIQUES,
-    WHALERS,
-    MIGHTY_DUCKS,
-    AMERICANS
+    Team("Must Be Nice", "#8d3c75", ":must-be-nice:"),
+    Team("Frontenacs", "#fed95f", ":frontenacs:"),
+    Team("Spitfires", "#447ae6", ":spitfires:"),
+    Team("Stick Figures", "#7548bd", ":stick-figures:")
 ]}
 
 
