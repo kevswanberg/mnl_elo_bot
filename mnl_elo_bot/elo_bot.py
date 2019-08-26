@@ -33,7 +33,7 @@ LOGGER.setLevel(logging.DEBUG)
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
 SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
-CSV_ID = "11HKFGPgWCA3g8auTNNSqVtyKk6WBuV7UeRYarVTBHvk"
+CSV_ID = "1A6nfa8iL5cmBVSXDXL3uf-Va0i_EvJdmZuTa_32v6l0"
 
 
 class Team:
@@ -75,10 +75,13 @@ class Team:
 
 
 TEAMS = {team.name: team for team in [
-    Team("Must Be Nice", "#8d3c75", ":must-be-nice:"),
-    Team("Frontenacs", "#fed95f", ":frontenacs:"),
-    Team("Spitfires", "#447ae6", ":spitfires:"),
-    Team("Stick Figures", "#7548bd", ":stick-figures:")
+    Team("Americans", "#1B335F", ":america:"),
+    Team("Tigers", "#FDC526", ":tiger2:"),
+    Team("Mighty Ducks", "#FF6600", ":mighty-ducks:"),
+    Team("North Stars", "#B3B3B2", ":north-stars:"),
+    Team("Golden Seals", "#163E35", ":seals:"),
+    Team("Whalers", "#008001", ":whalers:"),
+    Team("Nordiques", "#1999D8", ":nordiques:")
 ]}
 
 
