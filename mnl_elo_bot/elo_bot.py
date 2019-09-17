@@ -53,11 +53,18 @@ class Team:
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return self.name
+
+
     def win(self, change):
         self.history.append(self.elo + change)
 
     def lose(self, change):
         self.history.append(self.elo - change)
+
+    def bye_week(self):
+        self.history.append(self.elo)
 
     @property
     def latest_change(self):
@@ -179,6 +186,7 @@ def process_game(row):
     else:
         raise Exception('THERE ARE NO TIES')
 
+    return home_team, away_team
 
 def print_elos(on_date, message):
     print(get_print_message(on_date, message))
@@ -267,11 +275,18 @@ def process_results(results):
     Populate the TEAMS dictionary with the ELOS after the results of each game.
     returns the date of the latest game played
     """
+    games = 0
+    teams = []
     for row in results:
         try:
             if not row.get('Home Team'):  # bye week
                 continue
-            process_game(row)
+            games += 1
+            teams.extend(process_game(row))
+            if games % 3 == 0: # finished the week
+                odd_team_out = list(set(TEAMS.values()) - set(teams))[0]
+                odd_team_out.bye_week()
+                teams = []
         except IndexError:
             break
     return datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
