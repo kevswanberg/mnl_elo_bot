@@ -83,9 +83,9 @@ class Team:
 
 TEAMS = {team.name: team for team in [
     Team("Americans", "#1B335F", ":america:"),
-    Team("Tigers", "#FDC526", ":tiger2:"),
-    Team("Mighty Ducks", "#FF6600", ":mighty-ducks:"),
-    Team("North Stars", "#B3B3B2", ":north-stars:"),
+    Team("Tigers", "#FDC526", ":tigers:"),
+    Team("Mighty Ducks", "#FF6600", ":mighty_ducks:"),
+    Team("North Stars", "#B3B3B2", ":north_stars:"),
     Team("Golden Seals", "#163E35", ":seals:"),
     Team("Whalers", "#008001", ":whalers:"),
     Team("Nordiques", "#1999D8", ":nordiques:")
