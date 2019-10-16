@@ -78,7 +78,7 @@ class Team:
         elif self.latest_change < 0:
             return f"{self.name} rating goes down to {self.elo:.1f} ({self.latest_change:.1f})"
         else:
-            return f"{self.name} rating is at {self.elo}"
+            return f"{self.name} rating is at {self.elo:.1f}"
 
 
 TEAMS = {team.name: team for team in [
