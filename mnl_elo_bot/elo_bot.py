@@ -3,7 +3,7 @@
 A robot that downloads stats for MNL creates an image to send to slack.
 Intended to hurt diques feelings
 F#&$ You, Kevan
-Wow this stopped working
+Wow this stopped working... nvm, it's working again
 """
 import argparse
 import csv
