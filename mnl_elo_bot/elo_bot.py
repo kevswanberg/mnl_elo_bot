@@ -276,20 +276,26 @@ def process_results(results):
     returns the date of the latest game played
     """
     games = 0
-    teams = []
+    weekly_teams_played = []
+    last_game_date = None
     for row in results:
         try:
             if not row.get('Home Team'):  # bye week
                 continue
+            weekly_teams_played.extend(process_game(row))
             games += 1
-            teams.extend(process_game(row))
-            if games % 3 == 0: # finished the week
-                odd_team_out = list(set(TEAMS.values()) - set(teams))[0]
-                odd_team_out.bye_week()
-                teams = []
         except IndexError:
             break
-    return datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
+        except KeyError:
+            continue
+
+        if games % 3 == 0: # finished the week
+            last_game_date = row['Date']
+            odd_team_out = list(set(TEAMS.values()) - set(weekly_teams_played))[0]
+            odd_team_out.bye_week()
+            weekly_teams_played = []
+
+    return datetime.datetime.strptime(last_game_date, "%m/%d/%Y")
 
 
 if __name__ == '__main__':
