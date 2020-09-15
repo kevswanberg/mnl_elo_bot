@@ -9,6 +9,7 @@ import argparse
 import csv
 import datetime
 import io
+
 import logging
 import math
 from collections import OrderedDict
@@ -21,7 +22,7 @@ except ImportError as e:
     plt = None
 
 import requests
-from slackclient import SlackClient
+from slack import WebClient
 
 VELOCITY = 13
 SHOOTOUT = 0.6
@@ -31,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
-SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
+SLACK_CLIENT = WebClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
 CSV_ID = "1txfiFqoekWQFO1yJDyV1sgTzereo_cNBm-V6OIJ0Nww"
 
@@ -232,8 +233,7 @@ def get_print_message(on, message):
 
 
 def post_elos_to_slack(link, on, channel="tests", message=""):
-    SLACK_CLIENT.api_call(
-        'chat.postMessage',
+    SLACK_CLIENT.chat_postMessage(
         channel=channel,
         text=get_print_message(on, message),
         attachments=[
