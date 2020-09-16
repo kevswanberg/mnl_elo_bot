@@ -15,7 +15,7 @@ class IntegrationTest(unittest.TestCase):
             self.assertIsNotNone(team.color)
             self.assertIsNotNone(team.emoji)
             self.assertIsNotNone(team.history)
-    
+
 
 if __name__ == '__main__':
     unittest.main()

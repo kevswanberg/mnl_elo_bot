@@ -57,7 +57,6 @@ class Team:
     def __repr__(self):
         return self.name
 
-
     def win(self, change):
         self.history.append(self.elo + change)
 
@@ -189,6 +188,7 @@ def process_game(row):
 
     return home_team, away_team
 
+
 def print_elos(on_date, message):
     print(get_print_message(on_date, message))
 
@@ -290,7 +290,7 @@ def process_results(results):
         except KeyError:
             continue
 
-        if games % 3 == 0: # finished the week
+        if games % 3 == 0:  # finished the week
             last_game_date = row['Date']
             odd_team_out = list(set(TEAMS.values()) - set(weekly_teams_played))[0]
             odd_team_out.bye_week()
