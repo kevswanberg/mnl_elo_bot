@@ -251,7 +251,8 @@ def upload_picture_to_imgur(image):
         files={"image": image},
         headers={
             "Authorization": f"Client-ID {IMGUR_CLIENT_ID}"
-        }
+        },
+        timeout=5
     )
     if response.status_code == 200:
         return response.json()['data']['link']
@@ -261,8 +262,8 @@ def upload_picture_to_imgur(image):
 
 def get_raw_results_reader():
     response = requests.get(
-        f"https://docs.google.com/spreadsheets/d/{CSV_ID}/export?format=csv&gid=834633730"
-
+        f"https://docs.google.com/spreadsheets/d/{CSV_ID}/export?format=csv&gid=834633730",
+        timeout=2
     )
     buf = io.StringIO()
     buf.write(response.content.decode())
