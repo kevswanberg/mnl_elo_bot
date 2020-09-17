@@ -148,21 +148,6 @@ def get_margin(home_team, away_team, home_team_score, away_team_score):
     )
 
 
-def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootout):
-    ot_so = ""
-    if overtime:
-        ot_so = "(OT)"
-    elif shootout:
-        ot_so = "(SO)"
-
-    LOGGER.info(f"""{winner.name} {winner_score} {loser.name} {loser_score} {ot_so}.
-    {winner.name} elo {winner.elo:.1f} + {change:.1f}
-    {loser.name} elo {loser.elo:.1f} - {change:.1f}""")
-
-    winner.win(change)
-    loser.lose(change)
-
-
 def process_game(row):
     home_team = TEAMS[row['Home Team']]
     away_team = TEAMS[row['Away Team']]
@@ -173,18 +158,19 @@ def process_game(row):
     margin = get_margin(home_team, away_team, home_team_score, away_team_score)
     outcome = get_outcome(home_team_score, away_team_score, overtime, shootout)
     expected = get_expected(home_team, away_team)
-    change = VELOCITY * margin * (outcome - expected)
+    change = abs(VELOCITY * margin * (outcome - expected))
 
     if home_team_score > away_team_score:
-        set_elos(home_team, away_team, change,
-                 home_team_score, away_team_score,
-                 overtime, shootout)
+        winner = home_team
+        loser = away_team
     elif away_team_score > home_team_score:
-        set_elos(away_team, home_team, -change,
-                 away_team_score, home_team_score,
-                 overtime, shootout)
+        winner = away_team
+        loser = home_team
     else:
         raise Exception('THERE ARE NO TIES')
+
+    winner.win(change)
+    loser.lose(change)
 
     return home_team, away_team
 
