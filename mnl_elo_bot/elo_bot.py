@@ -284,6 +284,16 @@ def process_results(results):
 
     return datetime.datetime.strptime(last_game_date, "%m/%d/%Y")
 
+def main(post, channel, message):
+    last = process_results(get_raw_results_reader())
+    image = plot_elos()
+    if post:
+        link = upload_picture_to_imgur(image)
+        post_elos_to_slack(link, last, channel, message)
+    else:
+        print_elos(last, message)
+    
+
 
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(
@@ -293,10 +303,4 @@ if __name__ == '__main__':
     PARSER.add_argument('--message', default="")
 
     ARGS = PARSER.parse_args()
-    last = process_results(get_raw_results_reader())
-    image = plot_elos()
-    if ARGS.post:
-        link = upload_picture_to_imgur(image)
-        post_elos_to_slack(link, last, ARGS.channel, ARGS.message)
-    else:
-        print_elos(last, ARGS.message)
+    main(ARGS.post, ARGS.channel, ARGS.message)
