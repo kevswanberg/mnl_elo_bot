@@ -284,6 +284,7 @@ def process_results(results):
 
     return datetime.datetime.strptime(last_game_date, "%m/%d/%Y")
 
+
 def main(post, channel, message):
     last = process_results(get_raw_results_reader())
     image = plot_elos()
@@ -292,7 +293,6 @@ def main(post, channel, message):
         post_elos_to_slack(link, last, channel, message)
     else:
         print_elos(last, message)
-    
 
 
 if __name__ == '__main__':
