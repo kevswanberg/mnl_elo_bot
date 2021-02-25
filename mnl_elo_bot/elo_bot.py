@@ -81,17 +81,6 @@ class Team:
             return f"{self.name} rating is at {self.elo:.1f}"
 
 
-TEAMS = {team.name: team for team in [
-    Team("Americans", "#FF0000", ":america:"),
-    Team("Tigers", "#F1C232", ":tigers:"),
-    Team("Maroons", "#660000", ":maroons:"),
-    Team("North Stars", "#6AA84F", ":north_stars:"),
-    Team("Golden Seals", "#000000", ":seals:"),
-    Team("Whalers", "#0000FF", ":whalers:"),
-    Team("Nordiques", "#999999", ":nordiques:")
-]}
-
-
 def get_score(score):
     """
     Get the score in the from the csv string
@@ -148,9 +137,9 @@ def get_margin(home_team, away_team, home_team_score, away_team_score):
     )
 
 
-def process_game(row):
-    home_team = TEAMS[row['Home Team']]
-    away_team = TEAMS[row['Away Team']]
+def process_game(row, teams):
+    home_team = teams[row['Home Team']]
+    away_team = teams[row['Away Team']]
     home_team_score = get_score(row['Home Score'])
     away_team_score = get_score(row['Away Score'])
     overtime = get_overtime(row)
@@ -175,17 +164,17 @@ def process_game(row):
     return home_team, away_team
 
 
-def print_elos(on_date, message):
-    print(get_print_message(on_date, message))
+def print_elos(teams, on_date, message):
+    print(get_print_message(teams, on_date, message))
 
 
-def plot_elos():
+def plot_elos(teams):
     """
     Returns an in memory PNG of the picture of our teams ratings
     """
     assert plt is not None, "Matplotlib was not able to be imported"
     legend = []
-    sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
+    sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
     colors = [team.color for team in sorted_teams.values()]
 
     plt.gca().set_prop_cycle('color', colors)
@@ -202,26 +191,26 @@ def plot_elos():
     return buf
 
 
-def get_print_message(on, message):
+def get_print_message(teams, on, message):
     winner_icons = []
     message += f"MNL Elo ratings for {on:%m/%d/%Y}\n"
-    for team in TEAMS.values():
+    for team in teams.values():
         if team.latest_change > 0:
             winner_icons.append(team.emoji)
 
     message += "  ".join(winner_icons)
     message += "\n"
-    sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
+    sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
     for team in sorted_teams.values():
         message += team.last_game_explanation()+"\n"
 
     return message
 
 
-def post_elos_to_slack(link, on, channel="tests", message=""):
+def post_elos_to_slack(teams, link, on, channel="tests", message=""):
     SLACK_CLIENT.chat_postMessage(
         channel=channel,
-        text=get_print_message(on, message),
+        text=get_print_message(teams, on, message),
         attachments=[
             {
                 "image_url": link,
@@ -257,9 +246,9 @@ def get_raw_results_reader():
     return csv.DictReader(buf)
 
 
-def process_results(results):
+def process_results(teams, results):
     """
-    Populate the TEAMS dictionary with the ELOS after the results of each game.
+    Populate the teams dictionary with the ELOS after the results of each game.
     returns the date of the latest game played
     """
     games = 0
@@ -269,7 +258,7 @@ def process_results(results):
         try:
             if not row.get('Home Team'):  # bye week
                 continue
-            weekly_teams_played.extend(process_game(row))
+            weekly_teams_played.extend(process_game(row, teams))
             games += 1
         except IndexError:
             break
@@ -278,7 +267,7 @@ def process_results(results):
 
         if games % 3 == 0:  # finished the week
             last_game_date = row['Date']
-            odd_team_out = list(set(TEAMS.values()) - set(weekly_teams_played))[0]
+            odd_team_out = list(set(teams.values()) - set(weekly_teams_played))[0]
             odd_team_out.bye_week()
             weekly_teams_played = []
 
@@ -286,13 +275,24 @@ def process_results(results):
 
 
 def main(post, channel, message):
-    last = process_results(get_raw_results_reader())
-    image = plot_elos()
+    teams = {team.name: team for team in [
+        Team("Americans", "#FF0000", ":america:"),
+        Team("Tigers", "#F1C232", ":tigers:"),
+        Team("Maroons", "#660000", ":maroons:"),
+        Team("North Stars", "#6AA84F", ":north_stars:"),
+        Team("Golden Seals", "#000000", ":seals:"),
+        Team("Whalers", "#0000FF", ":whalers:"),
+        Team("Nordiques", "#999999", ":nordiques:")
+    ]}
+    reader = get_raw_results_reader()
+    last = process_results(teams, reader)
+
     if post:
+        image = plot_elos(teams)
         link = upload_picture_to_imgur(image)
-        post_elos_to_slack(link, last, channel, message)
+        post_elos_to_slack(teams, link, last, channel, message)
     else:
-        print_elos(last, message)
+        print_elos(teams, last, message)
 
 
 if __name__ == '__main__':
@@ -303,4 +303,5 @@ if __name__ == '__main__':
     PARSER.add_argument('--message', default="")
 
     ARGS = PARSER.parse_args()
+
     main(ARGS.post, ARGS.channel, ARGS.message)
