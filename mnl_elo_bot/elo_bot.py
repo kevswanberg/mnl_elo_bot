@@ -293,6 +293,7 @@ def main(post, channel, message):
         post_elos_to_slack(teams, link, last, channel, message)
     else:
         print_elos(teams, last, message)
+    return teams
 
 
 if __name__ == '__main__':
