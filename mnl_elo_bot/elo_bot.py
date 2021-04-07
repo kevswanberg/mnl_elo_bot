@@ -1,9 +1,6 @@
 #!/usr/bin/python3
 """
 A robot that downloads stats for MNL creates an image to send to slack.
-Intended to hurt diques feelings
-F#&$ You, Kevan
-Wow this stopped working... nvm, it's working again
 """
 import argparse
 import csv
@@ -85,7 +82,12 @@ def get_score(score):
     """
     Get the score in the from the csv string
     """
-    return int(score.split()[0])
+    # If you're having parsing problems I feel bad for you, son.
+    # I got 99 problems, but regex ain't one.
+    remove_these = ["(", "SO", "OT", ")"]
+    for r in remove_these:
+        score = score.replace(r, "")
+    return int(score)
 
 
 def get_shootout(row):
@@ -260,7 +262,7 @@ def process_results(teams, results):
                 continue
             weekly_teams_played.extend(process_game(row, teams))
             games += 1
-        except IndexError:
+        except ValueError:
             break
         except KeyError:
             continue
