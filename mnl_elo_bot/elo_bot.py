@@ -31,7 +31,7 @@ LOGGER.setLevel(logging.DEBUG)
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
 SLACK_CLIENT = WebClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
-CSV_ID = "1txfiFqoekWQFO1yJDyV1sgTzereo_cNBm-V6OIJ0Nww"
+CSV_ID = "1ict6PYEcbhqNHohoPg3qxdLhy9cv0mEsYvuFMDe-PnY"
 
 
 class Team:
@@ -239,7 +239,7 @@ def upload_picture_to_imgur(image):
 
 def get_raw_results_reader():
     response = requests.get(
-        f"https://docs.google.com/spreadsheets/d/{CSV_ID}/export?format=csv&gid=834633730",
+        f"https://docs.google.com/spreadsheets/d/{CSV_ID}/export?format=csv&gid=679131733",
         timeout=2
     )
     buf = io.StringIO()
@@ -278,13 +278,10 @@ def process_results(teams, results):
 
 def main(post, channel, message):
     teams = {team.name: team for team in [
-        Team("Americans", "#FF0000", ":america:"),
-        Team("Tigers", "#F1C232", ":tigers:"),
-        Team("Maroons", "#660000", ":maroons:"),
-        Team("North Stars", "#6AA84F", ":north_stars:"),
-        Team("Golden Seals", "#000000", ":seals:"),
-        Team("Whalers", "#0000FF", ":whalers:"),
-        Team("Nordiques", "#999999", ":nordiques:")
+        Team("Ballz Deep Cafe", "#F1C232", ":coffee:"),
+        Team("Team Red Team", "#FF0000", ":red_circle:"),
+        Team("Draft Real Men", "#A4C2F4", ":mens:"),
+        Team("Otto Zone", "#000000", ":otto-zone:")
     ]}
     reader = get_raw_results_reader()
     last = process_results(teams, reader)
