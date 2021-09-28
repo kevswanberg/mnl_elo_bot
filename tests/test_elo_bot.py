@@ -1,9 +1,10 @@
 import unittest
 import sys
+from mnl_elo_bot import elo_bot
+
 sys.path.append(".")
 
 
-from mnl_elo_bot import elo_bot
 
 
 class IntegrationTest(unittest.TestCase):
