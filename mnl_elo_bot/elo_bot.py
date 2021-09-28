@@ -278,7 +278,7 @@ def process_results(teams, results):
 
 
 def main(post, channel, message):
-    teams = { team.name: team for team in [
+    teams = {team.name: team for team in [
         Team("Americans", "#FF0000", ":america:"),
         Team("Tigers", "#F1C232", ":tigers:"),
         Team("Maroons", "#660000", ":maroons:"),
