@@ -4,6 +4,7 @@ from mnl_elo_bot import elo_bot
 
 sys.path.append(".")
 
+
 class IntegrationTest(unittest.TestCase):
     # Just see if it initializes and runs...
     def test_process(self):
