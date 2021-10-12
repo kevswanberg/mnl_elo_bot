@@ -10,10 +10,8 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python 3.8
@@ -32,3 +30,4 @@ jobs:
     - name: run the test
       run: |
         python tests/test_elo_bot.py
+    
