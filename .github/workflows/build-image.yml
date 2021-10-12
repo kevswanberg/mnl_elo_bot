@@ -50,6 +50,11 @@ jobs:
       id: validate
       run: terraform validate -no-color
       working-directory: ./infrastructure
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color
+      continue-on-error: true
     
     - name: Terraform Apply
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
