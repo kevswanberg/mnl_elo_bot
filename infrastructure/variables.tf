@@ -9,3 +9,7 @@ variable "imgur_client_id" {
 variable "slack_client_id" {
   default = "CHANGEME"
 }
+
+variable "image_tag" {
+  default = "latest"
+}

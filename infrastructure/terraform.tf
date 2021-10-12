@@ -6,6 +6,16 @@ terraform {
   }
 }
 
+terraform {
+  backend "remote" {
+    organization = "mnl_elo_bot"
+
+    workspaces {
+      name = "mnl_elo_bot_deploy"
+    }
+  }
+}
+
 provider "aws" {
   region = var.region
   profile = "default"
@@ -14,7 +24,7 @@ provider "aws" {
 resource "aws_lambda_function" "mnl_elo_bot" {
   function_name = "MNL_elo_bot"
   package_type = "Image"
-  image_uri = "842462664636.dkr.ecr.us-east-1.amazonaws.com/mnl_elo_bot:latest"
+  image_uri = "842462664636.dkr.ecr.us-east-1.amazonaws.com/mnl_elo_bot:${var.image_tag}"
 
   role = aws_iam_role.lambda_exec.arn
   environment {
