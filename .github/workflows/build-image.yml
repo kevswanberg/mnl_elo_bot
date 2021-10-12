@@ -55,6 +55,7 @@ jobs:
       id: plan
       run: terraform plan -no-color
       continue-on-error: true
+      working-directory: ./infrastructure
     
     - name: Terraform Apply
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
