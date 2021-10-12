@@ -39,16 +39,21 @@ jobs:
     - name: Terraform Format
       id: fmt
       run: terraform fmt -check
+      working-directory: ./infrastructure
 
     - name: Terraform Init
       id: init
       run: terraform init
-      
+      working-directory: ./infrastructure
+
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
+      working-directory: ./infrastructure
+    
     - name: Terraform Apply
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      working-directory: ./infrastructure
       env:
         IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
         SLACK_CLIENT_ID: ${{ secrets.SLACK_CLIENT_ID }}
