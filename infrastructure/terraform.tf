@@ -33,7 +33,7 @@ resource "aws_lambda_function" "mnl_elo_bot" {
       IMGUR_CLIENT_ID = var.imgur_client_id
     }
   }
-  timeout = 10
+  timeout = 25
 }
 
 # IAM role which dictates what other AWS services the Lambda function
