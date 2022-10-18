@@ -31,7 +31,7 @@ LOGGER.setLevel(logging.DEBUG)
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
 SLACK_CLIENT = WebClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
-CSV_ID = "1obVvplKsLh5RgOwhJQeYiuu6dpMAbMUJqzIvOuFqNDM"
+CSV_ID = "1GZjuqc1D36163y61pbxPCvVqDa-BqCzmELmiLvdARpY"
 CSV_GID = "834633730"
 
 
