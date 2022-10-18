@@ -274,7 +274,7 @@ def process_results(teams, results):
             odd_team_out.bye_week()
             weekly_teams_played = []
 
-    return datetime.datetime.strptime(last_game_date, "%m/%d/%Y")
+    return datetime.datetime.strptime(last_game_date, '%m/%d').replace(year=datetime.datetime.now().year)
 
 
 def main(post, channel, message):
