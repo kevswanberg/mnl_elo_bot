@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 """
 A robot that downloads stats for MNL creates an image to send to slack.
-Intended to hurt diques feelings
-F#&$ You, Kevan
-Wow this stopped working
 """
 import argparse
 import csv
 import datetime
 import io
+
 import logging
 import math
 from collections import OrderedDict
@@ -21,7 +19,7 @@ except ImportError as e:
     plt = None
 
 import requests
-from slackclient import SlackClient
+from slack import WebClient
 
 VELOCITY = 13
 SHOOTOUT = 0.6
@@ -31,9 +29,10 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
-SLACK_CLIENT = SlackClient(SLACK_CLIENT_ID)
+SLACK_CLIENT = WebClient(SLACK_CLIENT_ID)
 IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
-CSV_ID = "11HKFGPgWCA3g8auTNNSqVtyKk6WBuV7UeRYarVTBHvk"
+CSV_ID = "1GZjuqc1D36163y61pbxPCvVqDa-BqCzmELmiLvdARpY"
+CSV_GID = "834633730"
 
 
 class Team:
@@ -53,11 +52,17 @@ class Team:
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return self.name
+
     def win(self, change):
         self.history.append(self.elo + change)
 
     def lose(self, change):
         self.history.append(self.elo - change)
+
+    def bye_week(self):
+        self.history.append(self.elo)
 
     @property
     def latest_change(self):
@@ -71,22 +76,19 @@ class Team:
         elif self.latest_change < 0:
             return f"{self.name} rating goes down to {self.elo:.1f} ({self.latest_change:.1f})"
         else:
-            return f"{self.name} rating is at {self.elo}"
-
-
-TEAMS = {team.name: team for team in [
-    Team("Must Be Nice", "#8d3c75", ":must-be-nice:"),
-    Team("Frontenacs", "#fed95f", ":frontenacs:"),
-    Team("Spitfires", "#447ae6", ":spitfires:"),
-    Team("Stick Figures", "#7548bd", ":stick-figures:")
-]}
+            return f"{self.name} rating is at {self.elo:.1f}"
 
 
 def get_score(score):
     """
     Get the score in the from the csv string
     """
-    return int(score.split()[0])
+    # If you're having parsing problems I feel bad for you, son.
+    # I got 99 problems, but regex ain't one.
+    remove_these = ["(", "SO", "OT", ")"]
+    for r in remove_these:
+        score = score.replace(r, "")
+    return int(score)
 
 
 def get_shootout(row):
@@ -138,24 +140,9 @@ def get_margin(home_team, away_team, home_team_score, away_team_score):
     )
 
 
-def set_elos(winner, loser, change, winner_score, loser_score, overtime, shootout):
-    ot_so = ""
-    if overtime:
-        ot_so = "(OT)"
-    elif shootout:
-        ot_so = "(SO)"
-
-    LOGGER.info(f"""{winner.name} {winner_score} {loser.name} {loser_score} {ot_so}.
-    {winner.name} elo {winner.elo:.1f} + {change:.1f}
-    {loser.name} elo {loser.elo:.1f} - {change:.1f}""")
-
-    winner.win(change)
-    loser.lose(change)
-
-
-def process_game(row):
-    home_team = TEAMS[row['Home Team']]
-    away_team = TEAMS[row['Away Team']]
+def process_game(row, teams):
+    home_team = teams[row['Home Team']]
+    away_team = teams[row['Away Team']]
     home_team_score = get_score(row['Home Score'])
     away_team_score = get_score(row['Away Score'])
     overtime = get_overtime(row)
@@ -163,31 +150,34 @@ def process_game(row):
     margin = get_margin(home_team, away_team, home_team_score, away_team_score)
     outcome = get_outcome(home_team_score, away_team_score, overtime, shootout)
     expected = get_expected(home_team, away_team)
-    change = VELOCITY * margin * (outcome - expected)
+    change = abs(VELOCITY * margin * (outcome - expected))
 
     if home_team_score > away_team_score:
-        set_elos(home_team, away_team, change,
-                 home_team_score, away_team_score,
-                 overtime, shootout)
+        winner = home_team
+        loser = away_team
     elif away_team_score > home_team_score:
-        set_elos(away_team, home_team, -change,
-                 away_team_score, home_team_score,
-                 overtime, shootout)
+        winner = away_team
+        loser = home_team
     else:
         raise Exception('THERE ARE NO TIES')
 
+    winner.win(change)
+    loser.lose(change)
 
-def print_elos(on_date, message):
-    print(get_print_message(on_date, message))
+    return home_team, away_team
 
 
-def plot_elos():
+def print_elos(teams, on_date, message):
+    print(get_print_message(teams, on_date, message))
+
+
+def plot_elos(teams):
     """
     Returns an in memory PNG of the picture of our teams ratings
     """
     assert plt is not None, "Matplotlib was not able to be imported"
     legend = []
-    sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
+    sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
     colors = [team.color for team in sorted_teams.values()]
 
     plt.gca().set_prop_cycle('color', colors)
@@ -204,27 +194,26 @@ def plot_elos():
     return buf
 
 
-def get_print_message(on, message):
+def get_print_message(teams, on, message):
     winner_icons = []
     message += f"MNL Elo ratings for {on:%m/%d/%Y}\n"
-    for team in TEAMS.values():
+    for team in teams.values():
         if team.latest_change > 0:
             winner_icons.append(team.emoji)
 
     message += "  ".join(winner_icons)
     message += "\n"
-    sorted_teams = OrderedDict(sorted(TEAMS.items(), key=lambda t: -t[1].elo))
+    sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
     for team in sorted_teams.values():
         message += team.last_game_explanation()+"\n"
 
     return message
 
 
-def post_elos_to_slack(link, on, channel="tests", message=""):
-    SLACK_CLIENT.api_call(
-        'chat.postMessage',
+def post_elos_to_slack(teams, link, on, channel="tests", message=""):
+    SLACK_CLIENT.chat_postMessage(
         channel=channel,
-        text=get_print_message(on, message),
+        text=get_print_message(teams, on, message),
         attachments=[
             {
                 "image_url": link,
@@ -240,7 +229,8 @@ def upload_picture_to_imgur(image):
         files={"image": image},
         headers={
             "Authorization": f"Client-ID {IMGUR_CLIENT_ID}"
-        }
+        },
+        timeout=5
     )
     if response.status_code == 200:
         return response.json()['data']['link']
@@ -250,7 +240,12 @@ def upload_picture_to_imgur(image):
 
 def get_raw_results_reader():
     response = requests.get(
+<<<<<<< HEAD
         f"https://docs.google.com/spreadsheets/d/{CSV_ID}/export?format=csv&gid=834633730"
+=======
+        f"https://docs.google.com/spreadsheets/d/{CSV_ID}/export?format=csv&gid={CSV_GID}",
+        timeout=2
+>>>>>>> 0aa459d7ae0b3e16b810ac00293a54cfb3a9abfa
     )
     buf = io.StringIO()
     buf.write(response.content.decode())
@@ -258,19 +253,56 @@ def get_raw_results_reader():
     return csv.DictReader(buf)
 
 
-def process_results(results):
+def process_results(teams, results):
     """
-    Populate the TEAMS dictionary with the ELOS after the results of each game.
+    Populate the teams dictionary with the ELOS after the results of each game.
     returns the date of the latest game played
     """
+    games = 0
+    weekly_teams_played = []
+    last_game_date = None
     for row in results:
         try:
             if not row.get('Home Team'):  # bye week
                 continue
-            process_game(row)
-        except IndexError:
+            weekly_teams_played.extend(process_game(row, teams))
+            games += 1
+        except ValueError:
             break
-    return datetime.datetime.strptime(row['Date'], "%m/%d/%Y") - datetime.timedelta(days=7)
+        except KeyError:
+            continue
+
+        if games % 3 == 0:  # finished the week
+            last_game_date = row['Date']
+            odd_team_out = list(set(teams.values()) - set(weekly_teams_played))[0]
+            odd_team_out.bye_week()
+            weekly_teams_played = []
+
+    return datetime.datetime.strptime(last_game_date, '%m/%d').replace(
+        year=datetime.datetime.now().year
+    )
+
+
+def main(post, channel, message):
+    teams = {team.name: team for team in [
+        Team("Americans", "#FF0000", ":america:"),
+        Team("Tigers", "#F1C232", ":tigers:"),
+        Team("Maroons", "#660000", ":maroons:"),
+        Team("North Stars", "#6AA84F", ":north_stars:"),
+        Team("Golden Seals", "#000000", ":seals:"),
+        Team("Whalers", "#0000FF", ":whalers:"),
+        Team("Nordiques", "#999999", ":nordiques:")
+    ]}
+    reader = get_raw_results_reader()
+    last = process_results(teams, reader)
+
+    if post:
+        image = plot_elos(teams)
+        link = upload_picture_to_imgur(image)
+        post_elos_to_slack(teams, link, last, channel, message)
+    else:
+        print_elos(teams, last, message)
+    return teams
 
 
 if __name__ == '__main__':
@@ -281,10 +313,5 @@ if __name__ == '__main__':
     PARSER.add_argument('--message', default="")
 
     ARGS = PARSER.parse_args()
-    last = process_results(get_raw_results_reader())
-    image = plot_elos()
-    if ARGS.post:
-        link = upload_picture_to_imgur(image)
-        post_elos_to_slack(link, last, ARGS.channel, ARGS.message)
-    else:
-        print_elos(last, ARGS.message)
+
+    main(ARGS.post, ARGS.channel, ARGS.message)

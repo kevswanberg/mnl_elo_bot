@@ -1,0 +1,71 @@
+name: MNL BOT DEPLOY
+on:
+  push:
+    branches: [ master ]
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v1
+      with: 
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID}}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - name: Login to ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build, tag, push image
+      id: build-image
+      env: 
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: mnl_elo_bot
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        # terraform_version: 0.13.0:
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+    - name: Terraform Format
+      id: fmt
+      run: terraform fmt -check
+      working-directory: ./infrastructure
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      working-directory: ./infrastructure
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate -no-color
+      working-directory: ./infrastructure
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color
+      continue-on-error: true
+      working-directory: ./infrastructure
+    
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      working-directory: ./infrastructure
+      env:
+        IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+        SLACK_CLIENT_ID: ${{ secrets.SLACK_CLIENT_ID }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: 
+        terraform apply -auto-approve 
+        -var="imgur_client_id=$IMGUR_CLIENT_ID" 
+        -var="slack_client_id=$SLACK_CLIENT_ID"
+        -var="image_tag=$IMAGE_TAG"
