@@ -230,7 +230,7 @@ def upload_picture_to_imgur(image):
         headers={
             "Authorization": f"Client-ID {IMGUR_CLIENT_ID}"
         },
-        timeout=5
+        timeout=7
     )
     if response.status_code == 200:
         return response.json()['data']['link']
