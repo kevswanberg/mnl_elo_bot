@@ -3,13 +3,13 @@ import sys
 
 sys.path.append(".")
 
-from mnl_elo_bot import elo_bot # noqa
+from mnl_elo_bot import elo_bot  # noqa
 
 
 class IntegrationTest(unittest.TestCase):
     # Just see if it initializes and runs...
     def test_process(self):
-        teams = elo_bot.main(False, None, '')
+        teams = elo_bot.main(False, None, "")
 
         for team in teams.values():
             self.assertIsNotNone(team.name)
@@ -18,5 +18,5 @@ class IntegrationTest(unittest.TestCase):
             self.assertIsNotNone(team.history)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

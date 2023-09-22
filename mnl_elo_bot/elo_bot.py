@@ -28,17 +28,18 @@ OVERTIME = 0.8
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
-SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
+SLACK_CLIENT_ID = os.environ.get("SLACK_CLIENT_ID")
 SLACK_CLIENT = WebClient(SLACK_CLIENT_ID)
-IMGUR_CLIENT_ID = os.environ.get('IMGUR_CLIENT_ID')
+IMGUR_CLIENT_ID = os.environ.get("IMGUR_CLIENT_ID")
 CSV_ID = "1qEEtOdzQv2n1_jhIiF6ACW8nTyRmNcERrHVrSDf8WVk"
-CSV_GID = "679131733"
+CSV_GID = "834633730"
 
 
 class Team:
     """
     Model to hold ELO histories of each team
     """
+
     def __init__(self, name, color, emoji):
         self.name = name
         self.history = [1500]
@@ -95,14 +96,14 @@ def get_shootout(row):
     """
     Whether or not the game was decided in a shootout
     """
-    return ('SO' in row['Home Score']) or ('SO' in row['Away Score'])
+    return ("SO" in row["Home Score"]) or ("SO" in row["Away Score"])
 
 
 def get_overtime(row):
     """
     Whether or not the game was decided in overtime
     """
-    return ('OT' in row['Home Score']) or ('OT' in row['Away Score'])
+    return ("OT" in row["Home Score"]) or ("OT" in row["Away Score"])
 
 
 def get_outcome(home_team_score, away_team_score, overtime, shootout):
@@ -127,7 +128,7 @@ def get_expected(home_team, away_team):
     """
     get the expected value of a game
     """
-    return 1.0 / (1.0 + 10.0 ** (-(home_team.elo - away_team.elo)/400))
+    return 1.0 / (1.0 + 10.0 ** (-(home_team.elo - away_team.elo) / 400))
 
 
 def get_margin(home_team, away_team, home_team_score, away_team_score):
@@ -135,16 +136,21 @@ def get_margin(home_team, away_team, home_team_score, away_team_score):
     Get the multiplier for the margin of victory
     """
     goal_differential = home_team_score - away_team_score
-    return max(1, math.log(
-        abs(goal_differential - .85 * ((home_team.elo - away_team.elo)/100)) + math.e - 1)
+    return max(
+        1,
+        math.log(
+            abs(goal_differential - 0.85 * ((home_team.elo - away_team.elo) / 100))
+            + math.e
+            - 1
+        ),
     )
 
 
 def process_game(row, teams):
-    home_team = teams[row['Home Team']]
-    away_team = teams[row['Away Team']]
-    home_team_score = get_score(row['Home Score'])
-    away_team_score = get_score(row['Away Score'])
+    home_team = teams[row["Home Team"]]
+    away_team = teams[row["Away Team"]]
+    home_team_score = get_score(row["Home Score"])
+    away_team_score = get_score(row["Away Score"])
     overtime = get_overtime(row)
     shootout = get_shootout(row)
     margin = get_margin(home_team, away_team, home_team_score, away_team_score)
@@ -159,7 +165,7 @@ def process_game(row, teams):
         winner = away_team
         loser = home_team
     else:
-        raise Exception('THERE ARE NO TIES')
+        raise Exception("THERE ARE NO TIES")
 
     winner.win(change)
     loser.lose(change)
@@ -180,14 +186,14 @@ def plot_elos(teams):
     sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
     colors = [team.color for team in sorted_teams.values()]
 
-    plt.gca().set_prop_cycle('color', colors)
+    plt.gca().set_prop_cycle("color", colors)
 
     plt.title(f"MNL Elo, Velocity:{VELOCITY} OT:{OVERTIME} SO:{SHOOTOUT}")
     for team in sorted_teams.values():
         plt.plot(range(len(team.history)), team.history)
         legend.append(f"{team.name}: {team.elo:.1f}")
     plt.xticks(range(len(team.history)))
-    plt.legend(legend, loc='upper left')
+    plt.legend(legend, loc="upper left")
     buf = io.BytesIO()
     plt.savefig(buf)
     buf.seek(0)
@@ -196,7 +202,7 @@ def plot_elos(teams):
 
 def get_print_message(teams, on, message):
     winner_icons = []
-    message += f"MNL Elo ratings for {on:%m/%d/%Y}\n"
+    message += f"MNL Elo ratings for {on}\n"
     for team in teams.values():
         if team.latest_change > 0:
             winner_icons.append(team.emoji)
@@ -205,7 +211,7 @@ def get_print_message(teams, on, message):
     message += "\n"
     sorted_teams = OrderedDict(sorted(teams.items(), key=lambda t: -t[1].elo))
     for team in sorted_teams.values():
-        message += team.last_game_explanation()+"\n"
+        message += team.last_game_explanation() + "\n"
 
     return message
 
@@ -214,39 +220,45 @@ def post_elos_to_slack(teams, link, on, channel="tests", message=""):
     SLACK_CLIENT.chat_postMessage(
         channel=channel,
         text=get_print_message(teams, on, message),
-        attachments=[
-            {
-                "image_url": link,
-                "title": "Current Elo ratings"
-            }
-        ],
-        as_user=True)
+        attachments=[{"image_url": link, "title": "Current Elo ratings"}],
+        as_user=True,
+    )
 
 
 def upload_picture_to_imgur(image):
     response = requests.post(
         "https://api.imgur.com/3/image",
         files={"image": image},
-        headers={
-            "Authorization": f"Client-ID {IMGUR_CLIENT_ID}"
-        },
-        timeout=7
+        headers={"Authorization": f"Client-ID {IMGUR_CLIENT_ID}"},
+        timeout=7,
     )
     if response.status_code == 200:
-        return response.json()['data']['link']
+        return response.json()["data"]["link"]
     else:
-        raise Exception(f"Couldn't upload picture response \n{response.content.decode()}")
+        raise Exception(
+            f"Couldn't upload picture response \n{response.content.decode()}"
+        )
 
 
 def get_raw_results_reader():
     response = requests.get(
         f"https://docs.google.com/spreadsheets/d/{CSV_ID}/export?format=csv&gid={CSV_GID}",
-        timeout=2
+        timeout=2,
     )
     buf = io.StringIO()
     buf.write(response.content.decode())
     buf.seek(0)
     return csv.DictReader(buf)
+
+
+def get_date_str(last_game_date):
+    try:
+        dt = datetime.datetime.strptime(last_game_date, "%m/%d").replace(
+            year=datetime.datetime.now().year
+        )
+        return f"{dt:%m/%d/%Y}"
+    except ValueError:
+        return f"{last_game_date}???"
 
 
 def process_results(teams, results):
@@ -258,8 +270,9 @@ def process_results(teams, results):
     weekly_teams_played = []
     last_game_date = None
     for row in results:
+        print(row)
         try:
-            if not row.get('Home Team'):  # bye week
+            if not row.get("Home Team"):  # bye week
                 continue
             weekly_teams_played.extend(process_game(row, teams))
             games += 1
@@ -269,26 +282,27 @@ def process_results(teams, results):
             continue
 
         if games % 3 == 0:  # finished the week
-            last_game_date = row['Date']
+            last_game_date = row["Date"]
             odd_team_out = list(set(teams.values()) - set(weekly_teams_played))[0]
             odd_team_out.bye_week()
             weekly_teams_played = []
 
-    return datetime.datetime.strptime(last_game_date, '%m/%d').replace(
-        year=datetime.datetime.now().year
-    )
+    return get_date_str(last_game_date)
 
 
 def main(post, channel, message):
-    teams = {team.name: team for team in [
-        Team("Americans", "#000000", ":america:"),
-        Team("Tigers", "#9900FF", ":tigers:"),
-        Team("Scouts", "#A61C00", ":scouts:"),
-        Team("North Stars", "#38761D", ":north_stars:"),
-        Team("Golden Seals", "#783F04", ":seals:"),
-        Team("Whalers", "#1C4587", ":whalers:"),
-        Team("Nordiques", "#6FA8DC", ":nordiques:")
-    ]}
+    teams = {
+        team.name: team
+        for team in [
+            Team("Americans", "#000000", ":america:"),
+            Team("Tigers", "#9900FF", ":tigers:"),
+            Team("Scouts", "#A61C00", ":scouts:"),
+            Team("North Stars", "#38761D", ":north_stars:"),
+            Team("Golden Seals", "#783F04", ":seals:"),
+            Team("Whalers", "#1C4587", ":whalers:"),
+            Team("Nordiques", "#6FA8DC", ":nordiques:"),
+        ]
+    }
     reader = get_raw_results_reader()
     last = process_results(teams, reader)
 
@@ -301,12 +315,15 @@ def main(post, channel, message):
     return teams
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(
-        description=("Download latest MNL results and calculate ratings and post to slack"))
-    PARSER.add_argument('--post', action='store_true')
-    PARSER.add_argument('--channel', default="tests")
-    PARSER.add_argument('--message', default="")
+        description=(
+            "Download latest MNL results and calculate ratings and post to slack"
+        )
+    )
+    PARSER.add_argument("--post", action="store_true")
+    PARSER.add_argument("--channel", default="tests")
+    PARSER.add_argument("--message", default="")
 
     ARGS = PARSER.parse_args()
 

@@ -8,8 +8,9 @@ from mnl_elo_bot.elo_bot import (
     process_results,
     upload_picture_to_imgur,
     plot_elos,
-    post_elos_to_slack
+    post_elos_to_slack,
 )
+
 app = Flask(__name__)
 
 
@@ -26,5 +27,5 @@ def run_bot():
     return "hello i ran"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run()
